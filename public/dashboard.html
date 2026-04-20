@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    .header {
+      padding: 20px 40px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .logout { 
+      color: rgba(255,255,255,0.7); 
+      cursor: pointer; 
+      font-size: 14px;
+    }
+    .logout:hover { color: white; }
+    .container { padding: 40px; }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 { 
+      font-size: 16px; 
+      margin-bottom: 16px; 
+      color: rgba(255,255,255,0.7);
+    }
+    .modules { display: flex; gap: 12px; flex-wrap: wrap; }
+    .module {
+      background: rgba(79, 70, 229, 0.2);
+      border: 1px solid rgba(79, 70, 229, 0.5);
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 14px;
+    }
+    .empty { color: rgba(255,255,255,0.5); font-size: 14px; }
+    .test-btn {
+      margin-top: 16px;
+      padding: 10px 20px;
+      background: #4f46e5;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .test-btn:hover { background: #4338ca; }
+    #testResult {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    #testResult.success { 
+      display: block; 
+      background: rgba(34, 197, 94, 0.2); 
+      border: 1px solid rgba(34, 197, 94, 0.5);
+    }
+    #testResult.error { 
+      display: block; 
+      background: rgba(239, 68, 68, 0.2); 
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 id="siteName">Client Dashboard</h1>
+    <span class="logout" onclick="logout()">Logout</span>
+  </div>
+  <div class="container">
+    <div class="card">
+      <h2>Active Modules</h2>
+      <div class="modules" id="modules">
+        <span class="empty">Loading...</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Test Module Access</h2>
+      <button class="test-btn" onclick="testModule()">Test module-core</button>
+      <div id="testResult"></div>
+    </div>
+  </div>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/admin/login';
+    
+    async function loadModules() {
+      try {
+        const res = await fetch('/admin/api/my-modules', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const modules = await res.json();
+        const container = document.getElementById('modules');
+        if (modules.length === 0) {
+          container.innerHTML = '<span class="empty">No active modules</span>';
+        } else {
+          container.innerHTML = modules.map(m => `<span class="module">${m}</span>`).join('');
+        }
+      } catch (e) {
+        document.getElementById('modules').innerHTML = '<span class="empty">Failed to load modules</span>';
+      }
+    }
+    
+    async function testModule() {
+      const result = document.getElementById('testResult');
+      result.className = '';
+      result.textContent = 'Testing...';
+      try {
+        const res = await fetch('/admin/api/proxy/module-core/data', {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          result.className = 'success';
+          result.textContent = '✓ Module access OK: ' + JSON.stringify(data.data, null, 2);
+        } else {
+          result.className = 'error';
+          result.textContent = '✗ ' + (data.error || 'Access denied');
+        }
+      } catch (e) {
+        result.className = 'error';
+        result.textContent = '✗ Connection error';
+      }
+    }
+    
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/admin/login';
+    }
+    
+    loadModules();
+  </script>
+</body>
+</html>

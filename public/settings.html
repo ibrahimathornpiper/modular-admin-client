@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Settings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+    }
+    .header {
+      padding: 20px 40px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 20px; }
+    .nav { display: flex; gap: 20px; }
+    .nav a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; }
+    .nav a:hover { color: white; }
+    .container { padding: 40px; max-width: 500px; }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    h2 { font-size: 16px; margin-bottom: 16px; }
+    label { color: rgba(255,255,255,0.8); display: block; margin-bottom: 6px; font-size: 14px; }
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 14px;
+    }
+    input[readonly] { opacity: 0.6; }
+    button {
+      padding: 10px 20px;
+      background: #4f46e5;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #4338ca; }
+    .msg { padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; display: none; }
+    .msg.success { display: block; background: rgba(34, 197, 94, 0.2); }
+    .msg.error { display: block; background: rgba(239, 68, 68, 0.2); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Settings</h1>
+    <div class="nav">
+      <a href="/admin/dashboard">Dashboard</a>
+      <a href="/admin/login" onclick="logout()">Logout</a>
+    </div>
+  </div>
+  <div class="container">
+    <div class="msg" id="msg"></div>
+    <div class="card">
+      <h2>Site Settings</h2>
+      <div id="settingsForm">
+        <label>Site Name</label>
+        <input type="text" id="siteName">
+        
+        <label>Primary Color</label>
+        <input type="color" id="primaryColor">
+        
+        <label>License Key</label>
+        <input type="text" id="licenseKey" readonly>
+        
+        <button onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/admin/login';
+    
+    async function loadSettings() {
+      try {
+        const res = await fetch('/admin/api/settings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        document.getElementById('siteName').value = data.siteName || '';
+        document.getElementById('primaryColor').value = data.primaryColor || '#4f46e5';
+        document.getElementById('licenseKey').value = data.licenseKey || '';
+      } catch (e) {
+        showMsg('Failed to load settings', 'error');
+      }
+    }
+    
+    async function saveSettings() {
+      const msg = document.getElementById('msg');
+      try {
+        const res = await fetch('/admin/api/settings', {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            siteName: document.getElementById('siteName').value,
+            primaryColor: document.getElementById('primaryColor').value
+          })
+        });
+        const data = await res.json();
+        if (data.message) {
+          showMsg('Settings saved!', 'success');
+        } else {
+          showMsg(data.error || 'Save failed', 'error');
+        }
+      } catch (e) {
+        showMsg('Connection error', 'error');
+      }
+    }
+    
+    function showMsg(text, type) {
+      const msg = document.getElementById('msg');
+      msg.textContent = text;
+      msg.className = 'msg ' + type;
+    }
+    
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = '/admin/login';
+    }
+    
+    loadSettings();
+  </script>
+</body>
+</html>
